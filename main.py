@@ -1,36 +1,40 @@
-cat << 'EOF' > main.py
+import os
 import telebot
-import requests
 import random
 import time
+import threading
+from flask import Flask
+from supabase import create_client, Client
 
+# --- 1. FLASK WEB SERVER FOR RENDER PORT BINDING ---
+app = Flask('')
+
+@app.route('/')
+def health_check():
+    return "✅ DN-HOST Bot Status: HEALTHY 24/7"
+
+def run_web_server():
+    # Render PORT environment variable padhta hai
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host='0.0.0.0', port=port)
+
+# --- 2. CONFIG ---
 TOKEN = "8979677830:AAHkQj3nbESPko8TMVEVLXnoFCMHgc2RWwY"
-SUPABASE_URL = "https://kytsbcazzsgpoaudzvwc.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt5dHNiY2F6enNncG9hdWR6dndjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM5NTY2MTksImV4cCI6MjA5OTUzMjYxOX0.ZNIegUWXY9vLUIGCHO8Ww-cv8UJdsvBePS8ssaQewnQ"
+URL = "https://kytsbcazzsgpoaudzvwc.supabase.co"
+KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt5dHNiY2F6enNncG9hdWR6dndjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM5NTY2MTksImV4cCI6MjA5OTUzMjYxOX0.ZNIegUWXY9vLUIGCHO8Ww-cv8UJdsvBePS8ssaQewnQ"
 
 bot = telebot.TeleBot(TOKEN)
+supabase: Client = create_client(URL, KEY)
 user_data = {}
 
-def update_supabase_profile(invite_code, pin, phone):
-    url = f"{SUPABASE_URL}/rest/v1/profiles?invite_code=eq.{invite_code}"
-    headers = {
-        "apikey": SUPABASE_KEY,
-        "Authorization": f"Bearer {SUPABASE_KEY}",
-        "Content-Type": "application/json",
-        "Prefer": "return=minimal"
-    }
-    payload = {
-        "is_bot_active": True,
-        "security_pin": pin,
-        "phone": phone
-    }
-    try:
-        res = requests.patch(url, json=payload, headers=headers)
-        return res.status_code in [200, 204]
-    except:
-        return False
+# Clear webhooks on startup to prevent 409 conflicts
+try:
+    bot.remove_webhook()
+    print("✅ Webhooks cleared successfully!")
+except Exception as e:
+    print(f"Webhook warning: {e}")
 
-print("🚀 DNPAY TERMUX LIGHT-BOT SERVER ONLINE...")
+print("🚀 DNPAY RENDER CLOUD BOT SERVER STARTING...")
 
 @bot.message_handler(commands=['start'])
 def start(message):
@@ -68,18 +72,23 @@ def process_flow(message):
 
     elif state["step"] == "PIN":
         if text.isdigit() and len(text) == 4:
-            success = update_supabase_profile(state["uid"], text, state["phone"])
-            if success:
+            try:
+                supabase.table("profiles").update({"is_bot_active": True, "security_pin": text, "phone": state["phone"]}).eq("invite_code", state["uid"]).execute()
                 bot.send_message(cid, f"💎 *SECURITY ACTIVE!*\n\nPIN: *{text}*\n\nAb app mein wallets link kar sakte hain.", parse_mode="Markdown")
                 del user_data[cid]
-            else:
+            except Exception as e:
                 bot.send_message(cid, "❌ Database Error!")
         else:
             bot.send_message(cid, "⚠️ Sirf 4 digits PIN likhein.")
 
-while True:
-    try:
-        bot.polling(none_stop=True, interval=0, timeout=50)
-    except Exception as e:
-        time.sleep(5)
-EOF
+if __name__ == "__main__":
+    # Start Web Server on PORT in background thread for Render
+    threading.Thread(target=run_web_server, daemon=True).start()
+    
+    # Run Bot Polling with retry loop
+    while True:
+        try:
+            bot.polling(none_stop=True, interval=2, timeout=40)
+        except Exception as e:
+            print(f"Polling retry: {e}")
+            time.sleep(5)
