@@ -1,21 +1,14 @@
-import os
 import telebot
 import requests
 import random
 import time
 
-# --- NEW BOT TOKEN UPDATED ---
 TOKEN = "8979677830:AAHkQj3nbESPko8TMVEVLXnoFCMHgc2RWwY"
 SUPABASE_URL = "https://kytsbcazzsgpoaudzvwc.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt5dHNiY2F6enNncG9hdWR6dndjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM5NTY2MTksImV4cCI6MjA5OTUzMjYxOX0.ZNIegUWXY9vLUIGCHO8Ww-cv8UJdsvBePS8ssaQewnQ"
 
 bot = telebot.TeleBot(TOKEN)
 user_data = {}
-
-try:
-    bot.remove_webhook()
-    print("✅ Old Webhooks Cleared!")
-except: pass
 
 def update_supabase_profile(invite_code, pin, phone):
     url = f"{SUPABASE_URL}/rest/v1/profiles?invite_code=eq.{invite_code}"
@@ -36,7 +29,7 @@ def update_supabase_profile(invite_code, pin, phone):
     except:
         return False
 
-print("🚀 NEW DNPAY SECURITY BOT IS ONLINE!")
+print("🚀 DNPAY TERMUX LIGHT-BOT SERVER ONLINE...")
 
 @bot.message_handler(commands=['start'])
 def start(message):
@@ -88,3 +81,4 @@ while True:
         bot.polling(none_stop=True, interval=0, timeout=50)
     except Exception as e:
         time.sleep(5)
+EOF
