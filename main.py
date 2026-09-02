@@ -1,3 +1,4 @@
+cat << 'EOF' > main.py
 import telebot
 import requests
 import random
